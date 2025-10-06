@@ -1,0 +1,55 @@
+{
+    "version": "1.0.0",
+    "name": "@igroza/yellowstone-grpc-client",
+    "license": "MIT",
+    "author": "iGroza",
+    "private": false,
+    "description": "Solana Yellowstone Geyser gRPC client",
+    "homepage": "https://github.com/igroza/yellowstone-grpc-client",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "files": [
+        "dist",
+        "README.md",
+        "LICENSE",
+        "package.json",
+        ".npmrc",
+        "proto"
+    ],
+    "keywords": [
+        "geyser",
+        "solana",
+        "yellowstone",
+        "grpc",
+        "client",
+        "transaction",
+        "typescript"
+    ],
+    "scripts": {
+        "fix:prettier": "prettier \"**/*.ts\" --write",
+        "fix:lint": "eslint \"**/*.ts\" --fix",
+        "build": "node build.js",
+        "example": "npm run build && npx tsx --watch ./example/example.ts"
+    },
+    "dependencies": {
+        "@grpc/grpc-js": "1.14.0",
+        "@grpc/proto-loader": "0.8.0",
+        "@solana/web3.js": "1.98.4",
+        "bs58": "6.0.0"
+    },
+    "devDependencies": {
+        "@typescript-eslint/eslint-plugin": "8.32.1",
+        "@typescript-eslint/parser": "8.32.1",
+        "esbuild": "0.25.10",
+        "esbuild-plugin-d.ts": "1.3.1",
+        "eslint": "9.27.0",
+        "eslint-config-prettier": "10.1.5",
+        "eslint-plugin-eslint-comments": "3.2.0",
+        "eslint-plugin-import": "2.31.0",
+        "eslint-plugin-prettier": "5.4.0",
+        "eslint-plugin-sort-class-members": "1.21.0",
+        "prettier": "3.6.2",
+        "typescript": "5.7.3",
+        "typescript-eslint": "8.32.1"
+    }
+}

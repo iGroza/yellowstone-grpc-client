@@ -1,0 +1,29 @@
+.DS_Store
+node_modules
+.nyc_output
+yarn-error.log
+.env
+.env.prod
+.env.local
+.env.test
+.env.dev
+/dist
+.lock
+# yarn.lock
+
+# Local Netlify folder
+.netlify
+*.sqlite3
+WALLETS_DIR
+notes.ts
+yarn.lock
+*.log
+
+logs/
+.idea
+helm/values-test.yaml
+settings.json
+backups/
+sol-usd.cache
+.aider*
+scripts/**/*/out
