@@ -732,9 +732,6 @@ export class YellowstoneGeyserClient
   }
 
   getCurrentStream(): grpc.ClientDuplexStream<SubscribeRequest, SubscribeUpdate> | null {
-    if (!this._stream) {
-      throw new Error('No stream created');
-    }
     return this._stream!;
   }
 

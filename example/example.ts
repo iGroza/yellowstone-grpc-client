@@ -101,7 +101,7 @@ async function testClient() {
       switch (update.update_oneof) {
         case UpdateType.PING:
           console.log('📍 Ping received');
-          client.sendPing(stream, Math.floor(Date.now() / 1000));
+          client.sendPing(client.getCurrentStream()!, Math.floor(Date.now() / 1000));
           break;
 
         case UpdateType.PONG:
