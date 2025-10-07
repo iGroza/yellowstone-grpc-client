@@ -485,11 +485,12 @@ export class YellowstoneGeyserClient
       });
     });
   }
+
   // Helper method to create subscription with error handling
   createSubscription(
     request: SubscribeRequest,
     onData: (update: SubscribeUpdate) => void,
-    onError?: (error: Error) => void,
+    onError?: (error: ServiceError) => void,
     onEnd?: () => void,
   ): grpc.ClientDuplexStream<SubscribeRequest, SubscribeUpdate> {
     const stream = this.subscribe(request);
@@ -499,14 +500,14 @@ export class YellowstoneGeyserClient
         onData(update);
       } catch (error) {
         if (onError) {
-          onError(error as Error);
+          onError(error as ServiceError);
         } else {
           this.emit('error', error);
         }
       }
     });
 
-    stream.on('error', (error: Error) => {
+    stream.on('error', (error: ServiceError) => {
       if (onError) {
         onError(error);
       } else {
@@ -527,6 +528,7 @@ export class YellowstoneGeyserClient
 
     return stream;
   }
+
   // Helper to gracefully end a stream
   endStream(
     stream: grpc.ClientDuplexStream<SubscribeRequest, SubscribeUpdate>,

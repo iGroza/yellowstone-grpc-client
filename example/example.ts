@@ -1,7 +1,6 @@
 import {
   CommitmentLevel,
   ServiceError,
-  StatusObject,
   SubscribeRequest,
   SubscribeUpdate,
   SubscribeUpdateAccount,
@@ -90,14 +89,14 @@ async function testClient() {
 
     // Create subscription with proper error handling
     console.log('📡 Starting subscription...');
-    const stream = client.subscribe(req);
+
+    
 
     let updateCount = 0;
     let lastPingTime = Date.now();
     const PING_INTERVAL = 30000; // 30 seconds
 
-    // Handle incoming updates
-    stream.on('data', (update: SubscribeUpdate) => {
+    const onData = (update: SubscribeUpdate) => {
       updateCount++;
 
       // Handle different update types
@@ -215,9 +214,9 @@ async function testClient() {
         client.sendPing(stream, Math.floor(now / 1000));
         lastPingTime = now;
       }
-    });
+    }
 
-    stream.on('error', (error: ServiceError) => {
+    const onError = (error: ServiceError) => {
       console.error('\n❌ Stream error:', {
         message: error.message,
         code: error.code,
@@ -232,19 +231,18 @@ async function testClient() {
         // DEADLINE_EXCEEDED
         console.error('⚠️  Deadline exceeded');
       }
-    });
+    };
 
-    stream.on('end', () => {
+    const onEnd = () => {
       console.log('\n📪 Stream ended gracefully');
       console.log(`📊 Total updates received: ${updateCount}`);
-    });
+    };
 
-    stream.on('status', (status: StatusObject) => {
-      console.log('📡 Stream status:', {
-        code: status.code,
-        details: status.details,
-      });
-    });
+    const stream = client.createSubscription(req, 
+      onData,
+      onError,
+      onEnd
+    );
 
     console.log('✅ Subscription started, waiting for updates...\n');
     console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n');
