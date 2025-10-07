@@ -450,6 +450,7 @@ export class YellowstoneGeyserClient
   private client: any;
   private readonly config: YellowstoneGeyserClientConfig;
   private grpcObject: any;
+  private _stream: grpc.ClientDuplexStream<SubscribeRequest, SubscribeUpdate> | null = null;  
 
   constructor(config: YellowstoneGeyserClientConfig) {
     super();
@@ -459,6 +460,10 @@ export class YellowstoneGeyserClient
 
   close(): void {
     try {
+      if (this._stream) {
+        this._stream.end();
+        this._stream = null;
+      }
       this.client.close();
       this.emit('closed');
     } catch (error) {
@@ -527,17 +532,6 @@ export class YellowstoneGeyserClient
     });
 
     return stream;
-  }
-
-  // Helper to gracefully end a stream
-  endStream(
-    stream: grpc.ClientDuplexStream<SubscribeRequest, SubscribeUpdate>,
-  ): void {
-    try {
-      stream.end();
-    } catch (error) {
-      this.emit('error', error);
-    }
   }
 
   async getBlockHeight(
@@ -720,10 +714,10 @@ export class YellowstoneGeyserClient
     request: SubscribeRequest,
     options?: grpc.CallOptions,
   ): grpc.ClientDuplexStream<SubscribeRequest, SubscribeUpdate> {
-    const stream = this.client.Subscribe(options);
+    this._stream = this.client.Subscribe(options);
 
     // Write the initial request
-    stream.write(request, (err: Error | null) => {
+    this._stream!.write(request, (err: Error | null) => {
       if (err) {
         this.emit(
           'error',
@@ -734,7 +728,14 @@ export class YellowstoneGeyserClient
       }
     });
 
-    return stream;
+    return this._stream!;
+  }
+
+  getCurrentStream(): grpc.ClientDuplexStream<SubscribeRequest, SubscribeUpdate> | null {
+    if (!this._stream) {
+      throw new Error('No stream created');
+    }
+    return this._stream!;
   }
 
   async subscribeReplayInfo(

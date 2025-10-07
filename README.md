@@ -163,13 +163,6 @@ Sends a ping through an existing subscription stream.
 client.sendPing(stream, Date.now());
 ```
 
-##### `endStream(stream): void`
-Gracefully ends a subscription stream.
-
-```typescript
-client.endStream(stream);
-```
-
 ##### `close(): void`
 Closes the gRPC client connection.
 
@@ -610,7 +603,6 @@ client.on('error', (error) => {
 ```typescript
 process.on('SIGINT', () => {
   console.log('Shutting down...');
-  client.endStream(stream);
   client.close();
   process.exit(0);
 });

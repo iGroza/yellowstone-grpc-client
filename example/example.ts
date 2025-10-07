@@ -93,8 +93,6 @@ async function testClient() {
     
 
     let updateCount = 0;
-    let lastPingTime = Date.now();
-    const PING_INTERVAL = 30000; // 30 seconds
 
     const onData = (update: SubscribeUpdate) => {
       updateCount++;
@@ -103,6 +101,7 @@ async function testClient() {
       switch (update.update_oneof) {
         case UpdateType.PING:
           console.log('📍 Ping received');
+          client.sendPing(stream, Math.floor(Date.now() / 1000));
           break;
 
         case UpdateType.PONG:
@@ -206,14 +205,6 @@ async function testClient() {
           });
           break;
       }
-
-      // Send periodic pings
-      const now = Date.now();
-      if (now - lastPingTime > PING_INTERVAL) {
-        console.log('\n📤 Sending ping...');
-        client.sendPing(stream, Math.floor(now / 1000));
-        lastPingTime = now;
-      }
     }
 
     const onError = (error: ServiceError) => {
@@ -257,9 +248,6 @@ async function testClient() {
     // Handle graceful shutdown
     process.on('SIGINT', () => {
       console.log('\n\n⚠️  Shutting down gracefully...');
-      if (stream) {
-        client.endStream(stream);
-      }
       if (client) {
         client.close();
       }
