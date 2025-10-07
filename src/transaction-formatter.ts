@@ -7,7 +7,8 @@ import {
   VersionedTransactionResponse,
 } from '@solana/web3.js';
 import bs58 from 'bs58';
-import { SubscribeUpdate } from './yellowstone-geyser-client';
+
+import {SubscribeUpdate} from './yellowstone-geyser-client';
 
 export class TransactionFormatter {
   private static formMeta(meta: any): ConfirmedTransactionMeta {
@@ -71,12 +72,13 @@ export class TransactionFormatter {
       throw new Error('Transaction not found');
     }
 
-    const rawTx = data['transaction']?.['transaction']!;
+    const rawTx = data['transaction']['transaction']!;
+
     const slot = data['transaction']?.['slot']!;
     const version = rawTx.transaction?.message?.versioned ? 0 : 'legacy';
 
     const meta = this.formMeta(rawTx.meta);
-    const signatures = rawTx.transaction?.signatures.map((s) => {
+    const signatures = rawTx.transaction?.signatures.map(s => {
       // @ts-ignore
       if (s.type === 'Buffer') {
         // @ts-ignore
@@ -85,15 +87,17 @@ export class TransactionFormatter {
       return typeof s === 'string' ? s : bs58.encode(s);
     });
 
-    const message = this.formTxnMessage(rawTx.transaction.message);
+    const message = this.formTxnMessage(rawTx.transaction?.message);
 
     let blockTime = Date.now();
     if (data.created_at) {
-      blockTime = data.created_at.seconds * 1000 + Math.floor(data.created_at.nanos / 1e6);
+      blockTime =
+        data.created_at.seconds * 1000 +
+        Math.floor(data.created_at.nanos / 1e6);
     }
 
     return {
-      slot,
+      slot: parseInt(slot),
       version,
       blockTime,
       meta,

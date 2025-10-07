@@ -1,7 +1,7 @@
-import * as grpc from '@grpc/grpc-js';
-
 import {
   CommitmentLevel,
+  ServiceError,
+  StatusObject,
   SubscribeRequest,
   SubscribeUpdate,
   SubscribeUpdateAccount,
@@ -12,7 +12,7 @@ import {
   SubscribeUpdateTransactionStatus,
   TransactionFormatter,
   UpdateType,
-  YellowstoneGeyserClient
+  YellowstoneGeyserClient,
 } from '../dist';
 
 // Simple test to verify the client can be instantiated and basic methods work
@@ -20,17 +20,30 @@ async function testClient() {
   console.log('🚀 Testing Yellowstone Geyser gRPC Client...\n');
 
   const config = {
-    endpoint: 'grp-url.com:10101',
+    endpoint: 'grpc-url.com:10101',
   };
 
   try {
     // Test client creation
     console.log('📦 Creating client instance...');
     const client = new YellowstoneGeyserClient(config);
-    console.log('✅ Client created successfully\n');
+    const version = await client.getVersion();
+    console.log('\n🔍 Client version:', JSON.stringify(JSON.parse(version.version), null, 2));
+    
+    const slot = await client.getSlot();
+    console.log('\n🎰 Client slot:', JSON.stringify(slot, null, 2));
 
+    const blockHeight = await client.getBlockHeight();
+    console.log('\n⬆️ Client block height:', JSON.stringify(blockHeight, null, 2));
+
+    const latestBlockhash = await client.getLatestBlockhash();
+    console.log('\n#️⃣ Client latest blockhash:', JSON.stringify(latestBlockhash, null, 2));
+
+    const isBlockhashValid = await client.isBlockhashValid({blockhash: latestBlockhash.blockhash});
+    console.log('\n✅ Client is blockhash valid:', JSON.stringify(isBlockhashValid, null, 2));
+    
     // Set up client event listeners
-    client.on('error', (error: Error) => {
+    client.on('error', (error: ServiceError) => {
       console.error('❌ Client error:', error.message);
     });
 
@@ -109,7 +122,8 @@ async function testClient() {
         }
 
         case UpdateType.TRANSACTION: {
-          const versionedTransaction = TransactionFormatter.formTransactionFromJson(update);
+          const versionedTransaction =
+            TransactionFormatter.formTransactionFromJson(update);
           const signature = versionedTransaction.transaction.signatures[0];
 
           console.log(`💳 Transaction Update #${updateCount}:`, {
@@ -203,7 +217,7 @@ async function testClient() {
       }
     });
 
-    stream.on('error', (error: grpc.ServiceError) => {
+    stream.on('error', (error: ServiceError) => {
       console.error('\n❌ Stream error:', {
         message: error.message,
         code: error.code,
@@ -225,7 +239,7 @@ async function testClient() {
       console.log(`📊 Total updates received: ${updateCount}`);
     });
 
-    stream.on('status', (status: grpc.StatusObject) => {
+    stream.on('status', (status: StatusObject) => {
       console.log('📡 Stream status:', {
         code: status.code,
         details: status.details,
@@ -276,14 +290,14 @@ function bufferToBase58(buffer: Uint8Array | Buffer): string {
   return Buffer.from(buffer).toString('base64');
 }
 
-function formatTimestamp(timestamp?: { seconds: number; nanos: number }): string {
+function formatTimestamp(timestamp?: {seconds: number; nanos: number}): string {
   if (!timestamp) return 'N/A';
   const date = new Date(timestamp.seconds * 1000 + timestamp.nanos / 1000000);
   return date.toISOString();
 }
 
 function SlotStatusToString(status?: number): string {
-  const statusMap: { [key: number]: string } = {
+  const statusMap: {[key: number]: string} = {
     0: 'PROCESSED',
     1: 'CONFIRMED',
     2: 'FINALIZED',

@@ -1,4 +1,4 @@
-import {EventEmitter} from 'events';
+import { EventEmitter } from 'events';
 import * as path from 'path';
 
 import * as grpc from '@grpc/grpc-js';
@@ -48,7 +48,7 @@ export interface MessageAddressTableLookup {
 }
 
 export interface TransactionStatusMeta {
-  err: TransactionError | null;
+  err: TransactionError;
   fee: number;
   pre_balances: number[];
   post_balances: number[];
@@ -61,10 +61,10 @@ export interface TransactionStatusMeta {
   rewards: Reward[];
   loaded_writable_addresses: Uint8Array[];
   loaded_readonly_addresses: Uint8Array[];
-  return_data: ReturnData | null;
+  return_data: ReturnData;
   return_data_none: boolean;
-  compute_units_consumed?: number;
-  cost_units?: number;
+  compute_units_consumed?: number | undefined;
+  cost_units?: number | undefined;
 }
 
 export interface TransactionError {
@@ -80,7 +80,7 @@ export interface InnerInstruction {
   program_id_index: number;
   accounts: Uint8Array;
   data: Uint8Array;
-  stack_height?: number;
+  stack_height?: number | undefined;
 }
 
 export interface CompiledInstruction {
@@ -110,11 +110,11 @@ export interface ReturnData {
 }
 
 export enum RewardType {
-  UNSPECIFIED = 0,
-  FEE = 1,
-  RENT = 2,
-  STAKING = 3,
-  VOTING = 4,
+  Unspecified = 0,
+  Fee = 1,
+  Rent = 2,
+  Staking = 3,
+  Voting = 4,
 }
 
 export interface Reward {
@@ -135,7 +135,7 @@ export interface UnixTimestamp {
 }
 
 export interface BlockHeight {
-  block_height: number;
+  block_height: string;
 }
 
 export interface NumPartitions {
@@ -150,57 +150,20 @@ export interface YellowstoneGeyserClient {
   ): grpc.ClientDuplexStream<SubscribeRequest, SubscribeUpdate>;
 
   subscribeReplayInfo(
-    request: SubscribeReplayInfoRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: SubscribeReplayInfoResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall;
-
-  ping(
-    request: PingRequest,
-    callback: (error: grpc.ServiceError | null, response: PongResponse) => void,
-  ): grpc.ClientUnaryCall;
-
+    request?: SubscribeReplayInfoRequest,
+  ): Promise<SubscribeReplayInfoResponse>;
+  ping(request: PingRequest): Promise<PongResponse>;
   getLatestBlockhash(
-    request: GetLatestBlockhashRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: GetLatestBlockhashResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall;
-
+    request?: GetLatestBlockhashRequest,
+  ): Promise<GetLatestBlockhashResponse>;
   getBlockHeight(
-    request: GetBlockHeightRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: GetBlockHeightResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall;
-
-  getSlot(
-    request: GetSlotRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: GetSlotResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall;
-
+    request?: GetBlockHeightRequest,
+  ): Promise<GetBlockHeightResponse>;
+  getSlot(request?: GetSlotRequest): Promise<GetSlotResponse>;
   isBlockhashValid(
-    request: IsBlockhashValidRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: IsBlockhashValidResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall;
-
-  getVersion(
-    request: GetVersionRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: GetVersionResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall;
+    request?: IsBlockhashValidRequest,
+  ): Promise<IsBlockhashValidResponse>;
+  getVersion(request?: GetVersionRequest): Promise<GetVersionResponse>;
 }
 
 // Enums
@@ -234,56 +197,56 @@ export enum UpdateType {
 
 // Request/Response message interfaces
 export interface SubscribeRequest {
-  accounts?: {[key: string]: SubscribeRequestFilterAccounts};
-  slots?: {[key: string]: SubscribeRequestFilterSlots};
-  transactions?: {[key: string]: SubscribeRequestFilterTransactions};
-  transactions_status?: {[key: string]: SubscribeRequestFilterTransactions};
-  blocks?: {[key: string]: SubscribeRequestFilterBlocks};
-  blocks_meta?: {[key: string]: SubscribeRequestFilterBlocksMeta};
-  entry?: {[key: string]: SubscribeRequestFilterEntry};
-  commitment?: CommitmentLevel;
+  accounts?: { [key: string]: SubscribeRequestFilterAccounts };
+  slots?: { [key: string]: SubscribeRequestFilterSlots };
+  transactions?: { [key: string]: SubscribeRequestFilterTransactions };
+  transactions_status?: { [key: string]: SubscribeRequestFilterTransactions };
+  blocks?: { [key: string]: SubscribeRequestFilterBlocks };
+  blocks_meta?: { [key: string]: SubscribeRequestFilterBlocksMeta };
+  entry?: { [key: string]: SubscribeRequestFilterEntry };
+  commitment?: CommitmentLevel | undefined;
   accounts_data_slice?: SubscribeRequestAccountsDataSlice[];
-  ping?: SubscribeRequestPing;
-  from_slot?: number;
+  ping?: SubscribeRequestPing | undefined;
+  from_slot?: number | undefined;
 }
 
 export interface SubscribeRequestFilterAccounts {
   account?: string[];
   owner?: string[];
   filters?: SubscribeRequestFilterAccountsFilter[];
-  nonempty_txn_signature?: boolean;
+  nonempty_txn_signature?: boolean | undefined;
 }
 
 export interface SubscribeRequestFilterAccountsFilter {
-  memcmp?: SubscribeRequestFilterAccountsFilterMemcmp;
-  datasize?: number;
-  token_account_state?: boolean;
-  lamports?: SubscribeRequestFilterAccountsFilterLamports;
+  memcmp?: SubscribeRequestFilterAccountsFilterMemcmp | undefined;
+  datasize?: number | undefined;
+  token_account_state?: boolean | undefined;
+  lamports?: SubscribeRequestFilterAccountsFilterLamports | undefined;
 }
 
 export interface SubscribeRequestFilterAccountsFilterMemcmp {
   offset: number;
-  bytes?: Uint8Array;
-  base58?: string;
-  base64?: string;
+  bytes?: Uint8Array | undefined;
+  base58?: string | undefined;
+  base64?: string | undefined;
 }
 
 export interface SubscribeRequestFilterAccountsFilterLamports {
-  eq?: number;
-  ne?: number;
-  lt?: number;
-  gt?: number;
+  eq?: number | undefined;
+  ne?: number | undefined;
+  lt?: number | undefined;
+  gt?: number | undefined;
 }
 
 export interface SubscribeRequestFilterSlots {
-  filter_by_commitment?: boolean;
-  interslot_updates?: boolean;
+  filter_by_commitment?: boolean | undefined;
+  interslot_updates?: boolean | undefined;
 }
 
 export interface SubscribeRequestFilterTransactions {
-  vote?: boolean;
-  failed?: boolean;
-  signature?: string;
+  vote?: boolean | undefined;
+  failed?: boolean | undefined;
+  signature?: string | undefined;
   account_include?: string[];
   account_exclude?: string[];
   account_required?: string[];
@@ -291,14 +254,14 @@ export interface SubscribeRequestFilterTransactions {
 
 export interface SubscribeRequestFilterBlocks {
   account_include?: string[];
-  include_transactions?: boolean;
-  include_accounts?: boolean;
-  include_entries?: boolean;
+  include_transactions?: boolean | undefined;
+  include_accounts?: boolean | undefined;
+  include_entries?: boolean | undefined;
 }
 
-export interface SubscribeRequestFilterBlocksMeta {}
+export interface SubscribeRequestFilterBlocksMeta { }
 
-export interface SubscribeRequestFilterEntry {}
+export interface SubscribeRequestFilterEntry { }
 
 export interface SubscribeRequestAccountsDataSlice {
   offset: number;
@@ -310,23 +273,23 @@ export interface SubscribeRequestPing {
 }
 
 export interface SubscribeUpdate {
-  filters?: string[];
-  update_oneof?: UpdateType;
-  account?: SubscribeUpdateAccount;
-  slot?: SubscribeUpdateSlot;
-  transaction?: SubscribeUpdateTransaction;
-  transaction_status?: SubscribeUpdateTransactionStatus;
-  block?: SubscribeUpdateBlock;
-  ping?: SubscribeUpdatePing;
-  pong?: SubscribeUpdatePong;
-  block_meta?: SubscribeUpdateBlockMeta;
-  entry?: SubscribeUpdateEntry;
-  created_at: {seconds: number; nanos: number};
+  filters: string[];
+  account?: SubscribeUpdateAccount | undefined;
+  slot?: SubscribeUpdateSlot | undefined;
+  transaction?: SubscribeUpdateTransaction | undefined;
+  transaction_status?: SubscribeUpdateTransactionStatus | undefined;
+  block?: SubscribeUpdateBlock | undefined;
+  ping?: SubscribeUpdatePing | undefined;
+  pong?: SubscribeUpdatePong | undefined;
+  block_meta?: SubscribeUpdateBlockMeta | undefined;
+  entry?: SubscribeUpdateEntry | undefined;
+  created_at: { seconds: number; nanos: number };
+  update_oneof: UpdateType;
 }
 
 export interface SubscribeUpdateAccount {
   account: SubscribeUpdateAccountInfo;
-  slot: number;
+  slot: string;
   is_startup: boolean;
 }
 
@@ -335,22 +298,22 @@ export interface SubscribeUpdateAccountInfo {
   lamports: number;
   owner: Uint8Array;
   executable: boolean;
-  rent_epoch: number;
+  rent_epoch: string;
   data: Uint8Array;
   write_version: number;
-  txn_signature?: Uint8Array;
+  txn_signature?: Uint8Array | undefined;
 }
 
 export interface SubscribeUpdateSlot {
-  slot: number;
-  parent?: number;
+  slot: string;
+  parent?: string | undefined;
   status: SlotStatus;
-  dead_error?: string;
+  dead_error?: string | undefined;
 }
 
 export interface SubscribeUpdateTransaction {
   transaction: SubscribeUpdateTransactionInfo;
-  slot: number;
+  slot: string;
 }
 
 export interface SubscribeUpdateTransactionInfo {
@@ -362,20 +325,20 @@ export interface SubscribeUpdateTransactionInfo {
 }
 
 export interface SubscribeUpdateTransactionStatus {
-  slot: number;
+  slot: string;
   signature: Uint8Array;
   is_vote: boolean;
   index: number;
-  err: TransactionError | null;
+  err: TransactionError;
 }
 
 export interface SubscribeUpdateBlock {
-  slot: number;
+  slot: string;
   blockhash: string;
-  rewards: Reward[];
+  rewards: Rewards;
   block_time: UnixTimestamp;
   block_height: BlockHeight;
-  parent_slot: number;
+  parent_slot: string;
   parent_blockhash: string;
   executed_transaction_count: number;
   transactions: SubscribeUpdateTransactionInfo[];
@@ -386,19 +349,19 @@ export interface SubscribeUpdateBlock {
 }
 
 export interface SubscribeUpdateBlockMeta {
-  slot: number;
+  slot: string;
   blockhash: string;
-  rewards: Reward[];
+  rewards: Rewards;
   block_time: UnixTimestamp;
   block_height: BlockHeight;
-  parent_slot: number;
+  parent_slot: string;
   parent_blockhash: string;
   executed_transaction_count: number;
   entries_count: number;
 }
 
 export interface SubscribeUpdateEntry {
-  slot: number;
+  slot: string;
   index: number;
   num_hashes: number;
   hash: Uint8Array;
@@ -406,17 +369,17 @@ export interface SubscribeUpdateEntry {
   starting_transaction_index: number;
 }
 
-export interface SubscribeUpdatePing {}
+export interface SubscribeUpdatePing { }
 
 export interface SubscribeUpdatePong {
   id: number;
 }
 
 // Non-streaming request/response interfaces
-export interface SubscribeReplayInfoRequest {}
+export interface SubscribeReplayInfoRequest { }
 
 export interface SubscribeReplayInfoResponse {
-  first_available?: number;
+  first_available?: number | undefined;
 }
 
 export interface PingRequest {
@@ -432,9 +395,9 @@ export interface GetLatestBlockhashRequest {
 }
 
 export interface GetLatestBlockhashResponse {
-  slot: number;
+  slot: string;
   blockhash: string;
-  last_valid_block_height: number;
+  last_valid_block_height: string;
 }
 
 export interface GetBlockHeightRequest {
@@ -442,7 +405,7 @@ export interface GetBlockHeightRequest {
 }
 
 export interface GetBlockHeightResponse {
-  block_height: number;
+  block_height: string;
 }
 
 export interface GetSlotRequest {
@@ -450,10 +413,10 @@ export interface GetSlotRequest {
 }
 
 export interface GetSlotResponse {
-  slot: number;
+  slot: string;
 }
 
-export interface GetVersionRequest {}
+export interface GetVersionRequest { }
 
 export interface GetVersionResponse {
   version: string;
@@ -465,9 +428,12 @@ export interface IsBlockhashValidRequest {
 }
 
 export interface IsBlockhashValidResponse {
-  slot: number;
+  slot: string;
   valid: boolean;
 }
+
+export type StatusObject = grpc.StatusObject;
+export type ServiceError = grpc.ServiceError;
 
 // Client configuration interface
 export interface YellowstoneGeyserClientConfig {
@@ -476,11 +442,11 @@ export interface YellowstoneGeyserClientConfig {
   options?: grpc.ChannelOptions;
 }
 
+
 // Main client class
 export class YellowstoneGeyserClient
   extends EventEmitter
-  implements YellowstoneGeyserClient
-{
+  implements YellowstoneGeyserClient {
   private client: any;
   private readonly config: YellowstoneGeyserClientConfig;
   private grpcObject: any;
@@ -571,42 +537,74 @@ export class YellowstoneGeyserClient
       this.emit('error', error);
     }
   }
-  getBlockHeight(
-    request: GetBlockHeightRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: GetBlockHeightResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall {
-    return this.client.GetBlockHeight(request, callback);
-  }
-  getLatestBlockhash(
-    request: GetLatestBlockhashRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: GetLatestBlockhashResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall {
-    return this.client.GetLatestBlockhash(request, callback);
+
+  async getBlockHeight(
+    request: GetBlockHeightRequest = {},
+  ): Promise<GetBlockHeightResponse> {
+    return new Promise((resolve, reject) => {
+      this.client.GetBlockHeight(
+        request,
+        (error: ServiceError | null, response: GetBlockHeightResponse) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(response);
+          }
+        },
+      );
+    });
   }
 
-  getSlot(
-    request: GetSlotRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: GetSlotResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall {
-    return this.client.GetSlot(request, callback);
+  async getLatestBlockhash(
+    request: GetLatestBlockhashRequest = {},
+  ): Promise<GetLatestBlockhashResponse> {
+    return new Promise((resolve, reject) => {
+      this.client.GetLatestBlockhash(
+        request,
+        (
+          error: ServiceError | null,
+          response: GetLatestBlockhashResponse,
+        ) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(response);
+          }
+        },
+      );
+    });
   }
-  getVersion(
-    request: GetVersionRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: GetVersionResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall {
-    return this.client.GetVersion(request, callback);
+
+  async getSlot(request: GetSlotRequest = {}): Promise<GetSlotResponse> {
+    return new Promise((resolve, reject) => {
+      this.client.GetSlot(
+        request,
+        (error: ServiceError | null, response: GetSlotResponse) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(response);
+          }
+        },
+      );
+    });
+  }
+
+  async getVersion(
+    request: GetVersionRequest = {},
+  ): Promise<GetVersionResponse> {
+    return new Promise((resolve, reject) => {
+      this.client.GetVersion(
+        request,
+        (error: ServiceError | null, response: GetVersionResponse) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(response);
+          }
+        },
+      );
+    })
   }
   private initializeClient(config: YellowstoneGeyserClientConfig): void {
     // Load the proto files
@@ -629,15 +627,20 @@ export class YellowstoneGeyserClient
         enums: String,
         defaults: true,
         oneofs: true,
-        includeDirs: [process.cwd()],
       },
     );
 
     this.grpcObject = grpc.loadPackageDefinition(packageDefinition);
     const geyserPackage = this.grpcObject.geyser;
 
-    const credentials = config.credentials ? grpc.credentials.createFromMetadataGenerator(() => config.credentials) : grpc.credentials.createInsecure();
-    
+    const credentials = config.credentials
+      ? grpc.credentials.createFromMetadataGenerator((_, callback) => {
+          const metadata = new grpc.Metadata();
+          metadata.add('x-token', config.credentials!);
+          callback(null, metadata);
+        })
+      : grpc.credentials.createInsecure();
+
     const options: grpc.ChannelOptions = {
       'grpc.max_receive_message_length': -1,
       'grpc.max_send_message_length': -1,
@@ -652,7 +655,7 @@ export class YellowstoneGeyserClient
     };
 
     this.client = new geyserPackage.Geyser(
-      config.endpoint.replace('http://', '').replace('https://', ''),
+      config.endpoint.replace(/http[s]?:\/\//, ''),
       credentials,
       options,
     );
@@ -660,20 +663,39 @@ export class YellowstoneGeyserClient
     this.emit('initialized');
   }
 
-  isBlockhashValid(
+  async isBlockhashValid(
     request: IsBlockhashValidRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: IsBlockhashValidResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall {
-    return this.client.IsBlockhashValid(request, callback);
+  ): Promise<IsBlockhashValidResponse> {
+    return new Promise((resolve, reject) => {
+      this.client.IsBlockhashValid(
+        request,
+        (
+          error: ServiceError | null,
+          response: IsBlockhashValidResponse,
+        ) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(response);
+          }
+        },
+      );
+    });
   }
-  ping(
-    request: PingRequest,
-    callback: (error: grpc.ServiceError | null, response: PongResponse) => void,
-  ): grpc.ClientUnaryCall {
-    return this.client.Ping(request, callback);
+
+  async ping(request: PingRequest): Promise<PongResponse> {
+    return new Promise((resolve, reject) => {
+      this.client.Ping(
+        request,
+        (error: ServiceError | null, response: PongResponse) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(response);
+          }
+        },
+      );
+    });
   }
 
   // Helper to send ping through existing stream
@@ -682,7 +704,7 @@ export class YellowstoneGeyserClient
     id: number,
   ): void {
     const pingRequest: SubscribeRequest = {
-      ping: {id},
+      ping: { id },
     };
 
     stream.write(pingRequest, (err: Error | null) => {
@@ -713,14 +735,24 @@ export class YellowstoneGeyserClient
     return stream;
   }
 
-  subscribeReplayInfo(
-    request: SubscribeReplayInfoRequest,
-    callback: (
-      error: grpc.ServiceError | null,
-      response: SubscribeReplayInfoResponse,
-    ) => void,
-  ): grpc.ClientUnaryCall {
-    return this.client.SubscribeReplayInfo(request, callback);
+  async subscribeReplayInfo(
+    request: SubscribeReplayInfoRequest = {},
+  ): Promise<SubscribeReplayInfoResponse> {
+    return new Promise((resolve, reject) => {
+      this.client.SubscribeReplayInfo(
+        request,
+        (
+          error: ServiceError | null,
+          response: SubscribeReplayInfoResponse,
+        ) => {
+          if (error) {
+            reject(error);
+          } else {
+            resolve(response);
+          }
+        },
+      );
+    });
   }
 }
 

@@ -1,5 +1,5 @@
 {
-    "version": "1.0.0",
+    "version": "1.0.1",
     "name": "@igroza/yellowstone-grpc-client",
     "license": "MIT",
     "author": "iGroza",
@@ -29,7 +29,8 @@
         "fix:prettier": "prettier \"**/*.ts\" --write",
         "fix:lint": "eslint \"**/*.ts\" --fix",
         "build": "node build.js",
-        "example": "npm run build && npx tsx --watch ./example/example.ts"
+        "example": "npm run build && npx tsx --watch ./example/example.ts",
+        "generate:types": "protoc --plugin=protoc-gen-ts_proto=./node_modules/.bin/protoc-gen-ts_proto --ts_proto_out=./src/types proto/geyser.proto proto/solana-storage.proto"
     },
     "dependencies": {
         "@grpc/grpc-js": "1.14.0",
@@ -49,6 +50,7 @@
         "eslint-plugin-prettier": "5.4.0",
         "eslint-plugin-sort-class-members": "1.21.0",
         "prettier": "3.6.2",
+        "ts-proto": "2.7.7",
         "typescript": "5.7.3",
         "typescript-eslint": "8.32.1"
     }
