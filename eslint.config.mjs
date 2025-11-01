@@ -97,7 +97,7 @@ export default [
           trailingUnderscore: 'allow',
         },
         {selector: 'parameter', format: ['camelCase', 'snake_case']},
-        {selector: 'enumMember', format: ['UPPER_CASE']},
+        {selector: 'enumMember', format: ['UPPER_CASE', 'PascalCase']},
         {
           selector: [
             'property',

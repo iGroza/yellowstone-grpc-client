@@ -27,3 +27,4 @@ backups/
 sol-usd.cache
 .aider*
 scripts/**/*/out
+targer/

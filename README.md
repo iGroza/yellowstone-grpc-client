@@ -18,39 +18,100 @@ cp ./node_modules/@igroza/yellowstone-grpc-client/proto/* ./proto/
 
 This will copy the required `.proto` files (`geyser.proto` and `solana-storage.proto`) to your project for gRPC connection.
 
+## Dependency Security
+
+### Production dependencies
+
+These dependencies **will not** be installed in your project, but are included in the release bundle file via [esbuild](https://github.com/igroza/yellowstone-grpc-client/blob/main/build.js).
+
+- [@grpc/grpc-js@1.14.0](https://snyk.io/test/npm/@grpc/grpc-js/1.14.0)
+- [@grpc/proto-loader@0.8.0](https://snyk.io/test/npm/@grpc/proto-loader/0.8.0)
+- [@solana/web3.js@1.98.4](https://snyk.io/test/npm/@solana/web3.js/1.98.4)
+- [bs58@6.0.0](https://snyk.io/test/npm/bs58/6.0.0)
+
+Dependency graph:
+
+![Production dependency graph](https://github.com/igroza/yellowstone-grpc-client/blob/main/img/deps-graph.png?raw=true)
+
+### Development dependencies
+
+These dependencies used for building the package.
+
+- [@typescript-eslint/eslint-plugin@8.32.1](https://snyk.io/test/npm/@typescript-eslint/eslint-plugin/8.32.1)
+- [@typescript-eslint/parser@8.32.1](https://snyk.io/test/npm/@typescript-eslint/parser/8.32.1)
+- [esbuild@0.25.10](https://snyk.io/test/npm/esbuild/0.25.10)
+- [esbuild-plugin-d.ts@1.3.1](https://snyk.io/test/npm/esbuild-plugin-d.ts/1.3.1)
+- [eslint@9.27.0](https://snyk.io/test/npm/eslint/9.27.0)
+- [eslint-config-prettier@10.1.5](https://snyk.io/test/npm/eslint-config-prettier/10.1.5)
+- [eslint-plugin-eslint-comments@3.2.0](https://snyk.io/test/npm/eslint-plugin-eslint-comments/3.2.0)
+- [eslint-plugin-import@2.31.0](https://snyk.io/test/npm/eslint-plugin-import/2.31.0)
+- [eslint-plugin-prettier@5.4.0](https://snyk.io/test/npm/eslint-plugin-prettier/5.4.0)
+- [eslint-plugin-sort-class-members@1.21.0](https://snyk.io/test/npm/eslint-plugin-sort-class-members/1.21.0)
+- [prettier@3.6.2](https://snyk.io/test/npm/prettier/3.6.2)
+- [ts-proto@2.7.7](https://snyk.io/test/npm/ts-proto/2.7.7)
+- [typescript@5.7.3](https://snyk.io/test/npm/typescript/5.7.3)
+- [typescript-eslint@8.32.1](https://snyk.io/test/npm/typescript-eslint/8.32.1)
+
 ## Quick Start
+
+### Run example from repository
+
+- Clone the repository:
+
+  ```bash
+    git clone https://github.com/igroza/yellowstone-grpc-client.git
+    cd yellowstone-grpc-client
+  ```
+
+- replace `grpc-url.com:10101` with your actual gRPC endpoint in the [example/example.ts](https://github.com/igroza/yellowstone-grpc-client/blob/main/example/example.ts#L22) file
+
+- Install dependencies:
+
+  ```bash
+  npm install
+  ```
+
+- Run example code:
+
+  ```bash
+  npm run example
+  ```
+
+### Example code
 
 ```typescript
 import { YellowstoneGeyserClient, CommitmentLevel, TransactionFormatter } from '@igroza/yellowstone-grpc-client';
 
 // Create client
 const client = new YellowstoneGeyserClient({
-  endpoint: 'grpc-url.com:10101'
+  endpoint: 'grpc-url.com:10101',
+  credentials: 'your-api-token' // optional
 });
 
 // Connect to server
 await client.connect();
 
 // Subscribe to transactions
-const stream = client.subscribe({
-  transactions: {
-    'my_filter': {
-      vote: false,
-      failed: false,
-      account_include: ['YourAccountAddressHere']
+const stream = client.createSubscription(
+  {
+    transactions: {
+      'my_filter': {
+        vote: false,
+        failed: false,
+        account_include: ['YourAccountAddressHere']
+      }
+    },
+    commitment: CommitmentLevel.PROCESSED
+  },
+  (update) => {
+    if (update.transaction) {
+      const tx = TransactionFormatter.formTransactionFromJson(update);
+      console.log('Transaction:', tx.transaction.signatures[0]);
     }
   },
-  commitment: CommitmentLevel.PROCESSED
-});
-
-// Handle updates
-stream.on('data', (update) => {
-  if (update.transaction) {
-    // Convert raw transaction to Solana web3.js format
-    const formattedTx = TransactionFormatter.formTransactionFromJson(update);
-    console.log('New transaction:', formattedTx.transaction.signatures[0]);
-  }
-});
+  (error) => console.error('Error:', error),
+  () => console.log('Stream ended')
+);
 ```
 
 ## API Reference
@@ -64,6 +125,7 @@ const client = new YellowstoneGeyserClient(config: YellowstoneGeyserClientConfig
 ```
 
 **Configuration:**
+
 ```typescript
 interface YellowstoneGeyserClientConfig {
   endpoint: string;              // gRPC endpoint
@@ -73,6 +135,7 @@ interface YellowstoneGeyserClientConfig {
 ```
 
 **Example with authentication:**
+
 ```typescript
 const client = new YellowstoneGeyserClient({
   endpoint: 'grpc-url.com:10101',
@@ -83,14 +146,29 @@ const client = new YellowstoneGeyserClient({
 #### Methods
 
 ##### `connect(): Promise<void>`
-Establishes connection to the gRPC server with a 10-second timeout.
+
+Establishes connection to the gRPC server.
 
 ```typescript
 await client.connect();
 ```
 
+##### `createSubscription(request, onData, onError?, onEnd?)`
+
+Creates a subscription with callback handlers for data, errors, and stream end.
+
+```typescript
+const stream = client.createSubscription(
+  { transactions: { 'filter': { vote: false } }, commitment: CommitmentLevel.PROCESSED },
+  (update) => console.log('Update:', update),
+  (error) => console.error('Error:', error),
+  () => console.log('Stream ended')
+);
+```
+
 ##### `subscribe(request: SubscribeRequest, options?: grpc.CallOptions)`
-Creates a bidirectional streaming subscription.
+
+Low-level method that creates a bidirectional streaming subscription. Returns a gRPC stream object.
 
 ```typescript
 const stream = client.subscribe({
@@ -99,19 +177,8 @@ const stream = client.subscribe({
 });
 ```
 
-##### `createSubscription(request, onData, onError?, onEnd?)`
-Helper method that creates a subscription with automatic error handling.
-
-```typescript
-const stream = client.createSubscription(
-  request,
-  (update) => console.log('Update:', update),
-  (error) => console.error('Error:', error),
-  () => console.log('Stream ended')
-);
-```
-
 ##### `getVersion(): Promise<GetVersionResponse>`
+
 Retrieves the Geyser server version information.
 
 ```typescript
@@ -120,6 +187,7 @@ console.log('Version:', version.version);
 ```
 
 ##### `getSlot(request?: GetSlotRequest): Promise<GetSlotResponse>`
+
 Gets the current slot number.
 
 ```typescript
@@ -128,6 +196,7 @@ console.log('Current slot:', slot.slot);
 ```
 
 ##### `getBlockHeight(request?: GetBlockHeightRequest): Promise<GetBlockHeightResponse>`
+
 Gets the current block height.
 
 ```typescript
@@ -136,6 +205,7 @@ console.log('Block height:', blockHeight.block_height);
 ```
 
 ##### `getLatestBlockhash(request?: GetLatestBlockhashRequest): Promise<GetLatestBlockhashResponse>`
+
 Gets the latest blockhash.
 
 ```typescript
@@ -143,6 +213,7 @@ const { blockhash, slot, last_valid_block_height } = await client.getLatestBlock
 ```
 
 ##### `isBlockhashValid(request: IsBlockhashValidRequest): Promise<IsBlockhashValidResponse>`
+
 Checks if a blockhash is still valid.
 
 ```typescript
@@ -150,6 +221,7 @@ const { valid } = await client.isBlockhashValid({ blockhash: 'your-blockhash' })
 ```
 
 ##### `ping(request: PingRequest): Promise<PongResponse>`
+
 Sends a ping to test connectivity.
 
 ```typescript
@@ -157,31 +229,19 @@ const response = await client.ping({ count: 1 });
 ```
 
 ##### `sendPing(stream, id: number): void`
-Sends a ping through an existing subscription stream.
+
+Sends a ping through an existing subscription stream to keep the connection alive.
 
 ```typescript
 client.sendPing(stream, Date.now());
 ```
 
 ##### `close(): void`
+
 Closes the gRPC client connection.
 
 ```typescript
 client.close();
-```
-
-### Events
-
-The client extends `EventEmitter` and emits the following events:
-
-```typescript
-client.on('initialized', () => console.log('Client initialized'));
-client.on('connected', () => console.log('Connected to server'));
-client.on('subscribed', (request) => console.log('Subscription created'));
-client.on('error', (error) => console.error('Client error:', error));
-client.on('stream-ended', () => console.log('Stream ended'));
-client.on('closed', () => console.log('Client closed'));
-client.on('status', (status) => console.log('Status:', status));
 ```
 
 ## Subscription Types
@@ -191,66 +251,66 @@ client.on('status', (status) => console.log('Status:', status));
 Subscribe to account updates with flexible filtering options.
 
 ```typescript
-const stream = client.subscribe({
-  accounts: {
-    'my_accounts': {
-      account: ['AccountPubkey1', 'AccountPubkey2'], // Specific accounts
-      owner: ['ProgramId1', 'ProgramId2'],           // Accounts owned by programs
-      filters: [
-        { memcmp: { offset: 0, base58: 'SomeData' } }, // Memory comparison
-        { datasize: 165 },                             // Account data size
-        { token_account_state: true },                 // Token account filter
-        { lamports: { gt: 1000000 } }                  // Lamport balance filter
-      ],
-      nonempty_txn_signature: true                     // Only accounts with txn signature
-    }
+client.createSubscription(
+  {
+    accounts: {
+      'my_accounts': {
+        account: ['AccountPubkey1', 'AccountPubkey2'],
+        owner: ['ProgramId1', 'ProgramId2'],
+        filters: [
+          { memcmp: { offset: 0, base58: 'SomeData' } },
+          { datasize: 165 },
+          { token_account_state: true },
+          { lamports: { gt: 1000000 } }
+        ],
+        nonempty_txn_signature: true
+      }
+    },
+    commitment: CommitmentLevel.CONFIRMED
   },
-  commitment: CommitmentLevel.CONFIRMED
-});
-
-stream.on('data', (update) => {
-  if (update.account) {
-    const { account, slot, is_startup } = update.account;
-    console.log('Account updated:', {
-      pubkey: Buffer.from(account.pubkey).toString('base64'),
-      lamports: account.lamports,
-      owner: Buffer.from(account.owner).toString('base64'),
-      slot: slot
-    });
+  (update) => {
+    if (update.account) {
+      const { account, slot } = update.account;
+      console.log('Account updated:', {
+        pubkey: Buffer.from(account.pubkey).toString('base64'),
+        lamports: account.lamports,
+        slot: slot
+      });
+    }
   }
-});
+);
 ```
 
 ### Transaction Subscriptions
 
-Subscribe to transactions with account and vote filtering.
+Subscribe to transactions with filtering options.
 
 ```typescript
-const stream = client.subscribe({
-  transactions: {
-    'my_transactions': {
-      vote: false,                                    // Exclude vote transactions
-      failed: false,                                  // Exclude failed transactions
-      signature: 'specific-signature',                // Filter by specific signature
-      account_include: ['Account1', 'Account2'],      // Include txs involving these accounts
-      account_exclude: ['Account3'],                  // Exclude txs involving these accounts
-      account_required: ['Account4']                  // Only txs with these accounts
-    }
+client.createSubscription(
+  {
+    transactions: {
+      'my_transactions': {
+        vote: false,
+        failed: false,
+        account_include: ['Account1', 'Account2'],
+        account_exclude: ['Account3'],
+        account_required: ['Account4']
+      }
+    },
+    commitment: CommitmentLevel.PROCESSED,
+    from_slot: 100000000
   },
-  commitment: CommitmentLevel.PROCESSED,
-  from_slot: 100000000                                // Start from specific slot
-});
-
-stream.on('data', (update) => {
-  if (update.transaction) {
-    const tx = TransactionFormatter.formTransactionFromJson(update);
-    console.log('Transaction:', {
-      signature: tx.transaction.signatures[0],
-      slot: tx.slot,
-      success: tx.meta?.err === null
-    });
+  (update) => {
+    if (update.transaction) {
+      const tx = TransactionFormatter.formTransactionFromJson(update);
+      console.log('Transaction:', {
+        signature: tx.transaction.signatures[0],
+        slot: tx.slot,
+        success: tx.meta?.err === null
+      });
+    }
   }
-});
+);
 ```
 
 ### Slot Subscriptions
@@ -258,25 +318,22 @@ stream.on('data', (update) => {
 Subscribe to slot status updates.
 
 ```typescript
-const stream = client.subscribe({
-  slots: {
-    'my_slots': {
-      filter_by_commitment: true,  // Filter by commitment level
-      interslot_updates: true      // Include intermediate slot updates
-    }
+client.createSubscription(
+  {
+    slots: {
+      'my_slots': {
+        filter_by_commitment: true,
+        interslot_updates: true
+      }
+    },
+    commitment: CommitmentLevel.FINALIZED
   },
-  commitment: CommitmentLevel.FINALIZED
-});
-
-stream.on('data', (update) => {
-  if (update.slot) {
-    console.log('Slot update:', {
-      slot: update.slot.slot,
-      parent: update.slot.parent,
-      status: update.slot.status // PROCESSED, CONFIRMED, FINALIZED, etc.
-    });
+  (update) => {
+    if (update.slot) {
+      console.log('Slot:', update.slot.slot, 'Status:', update.slot.status);
+    }
   }
-});
+);
 ```
 
 ### Block Subscriptions
@@ -284,52 +341,42 @@ stream.on('data', (update) => {
 Subscribe to complete block data.
 
 ```typescript
-const stream = client.subscribe({
-  blocks: {
-    'my_blocks': {
-      account_include: ['AccountToMonitor'],
-      include_transactions: true,  // Include full transaction data
-      include_accounts: true,      // Include account updates
-      include_entries: true        // Include entry data
-    }
+client.createSubscription(
+  {
+    blocks: {
+      'my_blocks': {
+        account_include: ['AccountToMonitor'],
+        include_transactions: true,
+        include_accounts: true,
+        include_entries: true
+      }
+    },
+    commitment: CommitmentLevel.CONFIRMED
   },
-  commitment: CommitmentLevel.CONFIRMED
-});
-
-stream.on('data', (update) => {
-  if (update.block) {
-    const block = update.block;
-    console.log('Block:', {
-      slot: block.slot,
-      blockhash: block.blockhash,
-      transactions: block.executed_transaction_count,
-      accounts: block.updated_account_count
-    });
+  (update) => {
+    if (update.block) {
+      console.log('Block:', update.block.slot, 'Txs:', update.block.executed_transaction_count);
+    }
   }
-});
+);
 ```
 
 ### Block Meta Subscriptions
 
-Subscribe to lightweight block metadata (without full transaction/account data).
+Subscribe to lightweight block metadata.
 
 ```typescript
-const stream = client.subscribe({
-  blocks_meta: {
-    'my_block_meta': {}
+client.createSubscription(
+  {
+    blocks_meta: { 'my_block_meta': {} },
+    commitment: CommitmentLevel.FINALIZED
   },
-  commitment: CommitmentLevel.FINALIZED
-});
-
-stream.on('data', (update) => {
-  if (update.block_meta) {
-    console.log('Block meta:', {
-      slot: update.block_meta.slot,
-      blockhash: update.block_meta.blockhash,
-      parent_slot: update.block_meta.parent_slot
-    });
+  (update) => {
+    if (update.block_meta) {
+      console.log('Block:', update.block_meta.slot, update.block_meta.blockhash);
+    }
   }
-});
+);
 ```
 
 ### Entry Subscriptions
@@ -337,462 +384,205 @@ stream.on('data', (update) => {
 Subscribe to entry updates.
 
 ```typescript
-const stream = client.subscribe({
-  entry: {
-    'my_entries': {}
+client.createSubscription(
+  { entry: { 'my_entries': {} } },
+  (update) => {
+    if (update.entry) {
+      console.log('Entry:', update.entry.slot, update.entry.index);
+    }
   }
-});
-
-stream.on('data', (update) => {
-  if (update.entry) {
-    console.log('Entry:', {
-      slot: update.entry.slot,
-      index: update.entry.index,
-      num_hashes: update.entry.num_hashes
-    });
-  }
-});
+);
 ```
 
 ### Transaction Status Subscriptions
 
-Subscribe to lightweight transaction status updates (without full transaction data).
+Subscribe to lightweight transaction status updates.
 
 ```typescript
-const stream = client.subscribe({
-  transactions_status: {
-    'my_tx_status': {
-      vote: false,
-      failed: false
+client.createSubscription(
+  {
+    transactions_status: {
+      'my_tx_status': {
+        vote: false,
+        failed: false
+      }
+    }
+  },
+  (update) => {
+    if (update.transaction_status) {
+      console.log('Status:', update.transaction_status.slot);
     }
   }
-});
-
-stream.on('data', (update) => {
-  if (update.transaction_status) {
-    console.log('Transaction status:', {
-      signature: Buffer.from(update.transaction_status.signature).toString('hex'),
-      slot: update.transaction_status.slot,
-      has_error: !!update.transaction_status.err
-    });
-  }
-});
+);
 ```
 
 ## TransactionFormatter
 
-The `TransactionFormatter` utility converts raw Yellowstone Geyser transaction data into Solana web3.js compatible `VersionedTransactionResponse` format.
+Utility class for converting between Yellowstone transaction data and Solana web3.js compatible formats.
 
-### Usage
+### `formTransactionFromJson(update: SubscribeUpdate): VersionedTransactionResponse`
+
+Converts raw Yellowstone transaction data into Solana web3.js `VersionedTransactionResponse` format.
 
 ```typescript
 import { TransactionFormatter } from '@igroza/yellowstone-grpc-client';
 
-stream.on('data', (update) => {
-  if (update.transaction) {
-    const formattedTx = TransactionFormatter.formTransactionFromJson(update);
-    
-    // Access transaction properties
-    console.log('Signature:', formattedTx.transaction.signatures[0]);
-    console.log('Slot:', formattedTx.slot);
-    console.log('Version:', formattedTx.version); // 'legacy' or 0
-    console.log('Block Time:', new Date(formattedTx.blockTime));
-    
-    // Access transaction metadata
-    console.log('Fee:', formattedTx.meta.fee);
-    console.log('Success:', formattedTx.meta.err === null);
-    console.log('Logs:', formattedTx.meta.logMessages);
-    console.log('Pre Balances:', formattedTx.meta.preBalances);
-    console.log('Post Balances:', formattedTx.meta.postBalances);
-    console.log('Token Balances:', formattedTx.meta.postTokenBalances);
-    
-    // Access message and instructions
-    console.log('Instructions:', formattedTx.transaction.message.compiledInstructions);
-  }
-});
+const tx = TransactionFormatter.formTransactionFromJson(update);
+console.log('Signature:', tx.transaction.signatures[0]);
+console.log('Fee:', tx.meta.fee);
+console.log('Success:', tx.meta.err === null);
+console.log('Slot:', tx.slot);
+console.log('Block Time:', tx.blockTime);
+```
+
+### `toJSON(transaction: VersionedTransactionResponse): any`
+
+Converts a `VersionedTransactionResponse` to plain JSON format for serialization or storage.
+
+```typescript
+import { TransactionFormatter } from '@igroza/yellowstone-grpc-client';
+
+const tx = TransactionFormatter.formTransactionFromJson(update);
+const json = TransactionFormatter.toJSON(tx);
+
+// Store or transmit as JSON
+console.log(JSON.stringify(json, null, 2));
+
+// Save to file or database
+fs.writeFileSync('transaction.json', JSON.stringify(json));
 ```
 
 ## Update Types
 
-When handling stream data, check the `update_oneof` field to determine the update type:
+Check the `update_oneof` field to determine update type:
 
 ```typescript
 import { UpdateType } from '@igroza/yellowstone-grpc-client';
 
-stream.on('data', (update) => {
+client.createSubscription(request, (update) => {
   switch (update.update_oneof) {
     case UpdateType.ACCOUNT:
-      // Handle account update
       console.log('Account:', update.account);
       break;
-    
     case UpdateType.TRANSACTION:
-      // Handle transaction update
       const tx = TransactionFormatter.formTransactionFromJson(update);
       console.log('Transaction:', tx);
       break;
-    
     case UpdateType.SLOT:
-      // Handle slot update
       console.log('Slot:', update.slot);
       break;
-    
-    case UpdateType.BLOCK:
-      // Handle block update
-      console.log('Block:', update.block);
-      break;
-    
-    case UpdateType.BLOCK_META:
-      // Handle block meta update
-      console.log('Block Meta:', update.block_meta);
-      break;
-    
-    case UpdateType.ENTRY:
-      // Handle entry update
-      console.log('Entry:', update.entry);
-      break;
-    
-    case UpdateType.TRANSACTION_STATUS:
-      // Handle transaction status update
-      console.log('Tx Status:', update.transaction_status);
-      break;
-    
     case UpdateType.PING:
-      console.log('Ping received');
+      client.sendPing(stream, Date.now());
       break;
-    
     case UpdateType.PONG:
-      console.log('Pong received:', update.pong?.id);
+      console.log('Pong:', update.pong?.id);
       break;
   }
 });
 ```
 
-## Advanced Filtering
+## Filtering
 
-### Memory Comparison (memcmp)
-
-Filter accounts by comparing bytes at specific offsets:
+### Memory Compare
 
 ```typescript
-{
-  accounts: {
-    'token_accounts': {
-      owner: ['TokenkegQfeZyiNwAJbNbGKPFXCWuBvf9Ss623VQ5DA'],
-      filters: [
-        {
-          memcmp: {
-            offset: 32,  // Check bytes at offset 32
-            base58: 'YourMintAddressHere' // Match this base58 value
-          }
-        }
-      ]
-    }
-  }
-}
+filters: [{ memcmp: { offset: 32, base58: 'YourMintAddress' } }]
 ```
 
-### Data Size Filter
-
-Filter accounts by data size:
+### Data Size
 
 ```typescript
-{
-  accounts: {
-    'token_accounts': {
-      filters: [
-        { datasize: 165 } // Standard token account size
-      ]
-    }
-  }
-}
+filters: [{ datasize: 165 }]
 ```
 
-### Lamports Filter
-
-Filter accounts by lamport balance:
+### Lamports
 
 ```typescript
-{
-  accounts: {
-    'funded_accounts': {
-      filters: [
-        { lamports: { gt: 1000000 } }  // Greater than 1 SOL
-        // Also available: eq, ne, lt
-      ]
-    }
-  }
-}
+filters: [{ lamports: { gt: 1000000 } }] // gt, lt, eq, ne
 ```
 
-### Account Data Slicing
-
-Receive only specific portions of account data to reduce bandwidth:
+### Data Slicing
 
 ```typescript
-{
-  accounts: {
-    'large_accounts': {
-      account: ['LargeAccountPubkey']
-    }
-  },
-  accounts_data_slice: [
-    { offset: 0, length: 32 },   // Get first 32 bytes
-    { offset: 64, length: 8 }    // Get 8 bytes at offset 64
-  ]
-}
+accounts_data_slice: [{ offset: 0, length: 32 }]
 ```
 
 ## Commitment Levels
 
 ```typescript
-enum CommitmentLevel {
-  PROCESSED = 0,  // Fastest, may be rolled back
-  CONFIRMED = 1,  // Confirmed by supermajority, may be rolled back
-  FINALIZED = 2   // Finalized, cannot be rolled back
-}
-```
-
-## Slot Status
-
-```typescript
-enum SlotStatus {
-  SLOT_PROCESSED = 0,
-  SLOT_CONFIRMED = 1,
-  SLOT_FINALIZED = 2,
-  SLOT_FIRST_SHRED_RECEIVED = 3,
-  SLOT_COMPLETED = 4,
-  SLOT_CREATED_BANK = 5,
-  SLOT_DEAD = 6
-}
+CommitmentLevel.PROCESSED  // Fastest, may be rolled back
+CommitmentLevel.CONFIRMED  // Confirmed by supermajority
+CommitmentLevel.FINALIZED  // Finalized, cannot be rolled back
 ```
 
 ## Error Handling
 
-### Stream Errors
-
 ```typescript
-stream.on('error', (error) => {
-  console.error('Stream error:', error.message);
-  
-  // Handle specific gRPC error codes
-  switch (error.code) {
-    case 14: // UNAVAILABLE
-      console.log('Server unavailable - attempting reconnection...');
-      break;
-    case 4: // DEADLINE_EXCEEDED
-      console.log('Deadline exceeded');
-      break;
-    case 13: // INTERNAL
-      console.log('Internal server error');
-      break;
-  }
-});
-```
+client.createSubscription(
+  request,
+  (update) => { /* handle data */ },
+  (error) => {
+    console.error('Error:', error.message, error.code);
+    // Common codes: 14 (UNAVAILABLE), 4 (DEADLINE_EXCEEDED), 13 (INTERNAL)
+  },
+  () => console.log('Stream ended')
+);
 
-### Client Errors
-
-```typescript
-client.on('error', (error) => {
-  console.error('Client error:', error);
-});
-```
-
-### Graceful Shutdown
-
-```typescript
+// Graceful shutdown
 process.on('SIGINT', () => {
-  console.log('Shutting down...');
   client.close();
   process.exit(0);
 });
 ```
 
-## Practical Examples
+## Event Handling
 
-### Monitor Token Transactions
-
-```typescript
-import { YellowstoneGeyserClient, CommitmentLevel, TransactionFormatter } from '@igroza/yellowstone-grpc-client';
-
-const client = new YellowstoneGeyserClient({
-  endpoint: 'grpc-url.com:10101'
-});
-
-await client.connect();
-
-const stream = client.subscribe({
-  transactions: {
-    'token_transfers': {
-      vote: false,
-      failed: false,
-      account_include: ['TokenProgramId', 'YourTokenMint']
-    }
-  },
-  commitment: CommitmentLevel.CONFIRMED
-});
-
-stream.on('data', (update) => {
-  if (update.transaction) {
-    const tx = TransactionFormatter.formTransactionFromJson(update);
-    console.log('Token transaction:', {
-      signature: tx.transaction.signatures[0],
-      slot: tx.slot,
-      fee: tx.meta.fee,
-      success: tx.meta.err === null,
-      tokenBalances: tx.meta.postTokenBalances
-    });
-  }
-});
-```
-
-### Monitor Wallet Changes
+The client extends `EventEmitter` and emits various events during its lifecycle. Use the `YellowstoneGeyserClientEvents` enum for type-safe event handling:
 
 ```typescript
-const stream = client.subscribe({
-  accounts: {
-    'wallet_monitor': {
-      account: ['YourWalletAddress']
-    }
-  },
-  transactions: {
-    'wallet_txs': {
-      vote: false,
-      account_include: ['YourWalletAddress']
-    }
-  },
-  commitment: CommitmentLevel.PROCESSED
+import { YellowstoneGeyserClient, YellowstoneGeyserClientEvents } from '@igroza/yellowstone-grpc-client';
+
+const client = new YellowstoneGeyserClient({ endpoint: 'grpc-url.com:10101' });
+
+// Listen to lifecycle events
+client.on(YellowstoneGeyserClientEvents.INITIALIZED, () => {
+  console.log('Client initialized');
 });
 
-stream.on('data', (update) => {
-  if (update.account) {
-    console.log('Balance changed:', {
-      lamports: update.account.account.lamports,
-      slot: update.account.slot
-    });
-  }
-  
-  if (update.transaction) {
-    const tx = TransactionFormatter.formTransactionFromJson(update);
-    console.log('Wallet transaction:', tx.transaction.signatures[0]);
-  }
-});
-```
-
-### Track Program Accounts
-
-```typescript
-const stream = client.subscribe({
-  accounts: {
-    'program_accounts': {
-      owner: ['YourProgramId'],
-      filters: [
-        { 
-          memcmp: { 
-            offset: 0, 
-            base58: 'DiscriminatorValue' 
-          } 
-        }
-      ]
-    }
-  }
+client.on(YellowstoneGeyserClientEvents.CONNECTED, () => {
+  console.log('Connected to server');
 });
 
-stream.on('data', (update) => {
-  if (update.account) {
-    const account = update.account.account;
-    console.log('Program account updated:', {
-      pubkey: Buffer.from(account.pubkey).toString('base64'),
-      data: Buffer.from(account.data).toString('base64')
-    });
-  }
+client.on(YellowstoneGeyserClientEvents.SUBSCRIBED, (request) => {
+  console.log('Subscription created:', request);
+});
+
+client.on(YellowstoneGeyserClientEvents.ERROR, (error) => {
+  console.error('Error occurred:', error);
+});
+
+client.on(YellowstoneGeyserClientEvents.STREAM_ENDED, () => {
+  console.log('Stream ended');
+});
+
+client.on(YellowstoneGeyserClientEvents.CLOSED, () => {
+  console.log('Client closed');
+});
+
+client.on(YellowstoneGeyserClientEvents.STATUS, (status) => {
+  console.log('Status update:', status);
 });
 ```
 
-### Monitor Blocks
+**Available Events:**
 
-```typescript
-const stream = client.subscribe({
-  blocks_meta: {
-    'block_tracker': {}
-  },
-  commitment: CommitmentLevel.FINALIZED
-});
-
-stream.on('data', (update) => {
-  if (update.block_meta) {
-    console.log('New finalized block:', {
-      slot: update.block_meta.slot,
-      blockhash: update.block_meta.blockhash,
-      height: update.block_meta.block_height?.block_height,
-      transactions: update.block_meta.executed_transaction_count,
-      time: new Date(update.block_meta.block_time?.timestamp * 1000)
-    });
-  }
-});
-```
-
-### Ping/Pong Keepalive
-
-```typescript
-const PING_INTERVAL = 30000; // 30 seconds
-let lastPing = Date.now();
-
-stream.on('data', (update) => {
-  // Send periodic pings to keep connection alive
-  const now = Date.now();
-  if (now - lastPing > PING_INTERVAL) {
-    client.sendPing(stream, Math.floor(now / 1000));
-    lastPing = now;
-  }
-  
-  if (update.pong) {
-    console.log('Pong received:', update.pong.id);
-  }
-});
-```
-
-## Development
-
-```bash
-# Install dependencies
-npm install
-
-# Build the project
-npm run build
-
-# Run example
-npm run example
-```
-
-## Proto Files Reference
-
-The client is based on two proto files:
-
-- **geyser.proto** - Main gRPC service definition with subscription and RPC methods
-- **solana-storage.proto** - Solana transaction and block data structures
-
-These files define the complete interface for the Yellowstone Geyser service.
-
-## TypeScript Support
-
-All types are fully defined and exported:
-
-```typescript
-import {
-  YellowstoneGeyserClient,
-  CommitmentLevel,
-  SlotStatus,
-  UpdateType,
-  SubscribeRequest,
-  SubscribeUpdate,
-  SubscribeUpdateAccount,
-  SubscribeUpdateTransaction,
-  SubscribeUpdateSlot,
-  SubscribeUpdateBlock,
-  TransactionFormatter,
-} from '@igroza/yellowstone-grpc-client';
-```
+- `INITIALIZED` - Client has been initialized
+- `CONNECTED` - Successfully connected to the gRPC server
+- `SUBSCRIBED` - Subscription has been created
+- `ERROR` - An error occurred
+- `STREAM_ENDED` - Subscription stream has ended
+- `CLOSED` - Client connection has been closed
+- `STATUS` - gRPC status update received
 
 ## License
 

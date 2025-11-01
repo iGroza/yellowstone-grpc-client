@@ -8,9 +8,50 @@ import {
 } from '@solana/web3.js';
 import bs58 from 'bs58';
 
-import {SubscribeUpdate} from './yellowstone-geyser-client';
+import {
+  SubscribeUpdate,
+  SubscribeUpdateTransaction,
+  TransactionStatusMeta,
+  UpdateType,
+} from './types';
 
 export class TransactionFormatter {
+  private static convertMeta(
+    meta: ConfirmedTransactionMeta | null,
+  ): TransactionStatusMeta {
+    if (!meta) {
+      return {} as TransactionStatusMeta;
+    }
+
+    return {
+      err: meta.err ? {err: new Uint8Array()} : ({} as any),
+      fee: meta.fee || 0,
+      pre_balances: meta.preBalances || [],
+      post_balances: meta.postBalances || [],
+      inner_instructions:
+        meta.innerInstructions?.map(inner => ({
+          index: inner.index,
+          instructions: inner.instructions.map(ix => ({
+            program_id_index: ix.programIdIndex,
+            accounts: Uint8Array.from(ix.accounts),
+            data: bs58.decode(ix.data),
+          })),
+        })) || [],
+      inner_instructions_none: !meta.innerInstructions,
+      log_messages: meta.logMessages || [],
+      log_messages_none: !meta.logMessages,
+      pre_token_balances: (meta.preTokenBalances || []) as any,
+      post_token_balances: (meta.postTokenBalances || []) as any,
+      rewards: [],
+      loaded_writable_addresses:
+        meta.loadedAddresses?.writable?.map(addr => addr.toBytes()) || [],
+      loaded_readonly_addresses:
+        meta.loadedAddresses?.readonly?.map(addr => addr.toBytes()) || [],
+      return_data: {} as any,
+      return_data_none: true,
+    };
+  }
+
   private static formMeta(meta: any): ConfirmedTransactionMeta {
     return {
       err: meta?.errorInfo ? {err: meta?.errorInfo} : null,
@@ -216,5 +257,106 @@ export class TransactionFormatter {
           ) || [],
       });
     }
+  }
+
+  public static toJSON(
+    transaction: VersionedTransactionResponse,
+  ): SubscribeUpdateTransaction {
+    const message = transaction.transaction.message;
+    const isVersioned = transaction.version !== 'legacy';
+
+    let account_keys: Uint8Array[];
+    let instructions: any[];
+    let address_table_lookups: any[] = [];
+
+    if ('staticAccountKeys' in message) {
+      // MessageV0
+      account_keys = message.staticAccountKeys.map((k: PublicKey) =>
+        k.toBytes(),
+      );
+      instructions = message.compiledInstructions.map(
+        (ix: {
+          programIdIndex: number;
+          accountKeyIndexes: number[];
+          data: Uint8Array;
+        }) => ({
+          program_id_index: ix.programIdIndex,
+          accounts: ix.accountKeyIndexes,
+          data: ix.data,
+        }),
+      );
+      address_table_lookups = message.addressTableLookups.map(
+        (lookup: {
+          accountKey: PublicKey;
+          writableIndexes: number[];
+          readonlyIndexes: number[];
+        }) => ({
+          account_key: lookup.accountKey.toBytes(),
+          writable_indexes: Uint8Array.from(lookup.writableIndexes),
+          readonly_indexes: Uint8Array.from(lookup.readonlyIndexes),
+        }),
+      );
+    } else {
+      // Legacy Message
+      const legacyMessage = message as Message;
+      account_keys = legacyMessage.accountKeys.map((k: PublicKey) =>
+        k.toBytes(),
+      );
+      instructions = legacyMessage.instructions.map(
+        (ix: {programIdIndex: number; accounts: number[]; data: string}) => ({
+          program_id_index: ix.programIdIndex,
+          accounts: Uint8Array.from(ix.accounts),
+          data: bs58.decode(ix.data),
+        }),
+      );
+    }
+
+    return {
+      transaction: {
+        signature: bs58.decode(
+          transaction.transaction.signatures[0],
+        ) as Uint8Array,
+        is_vote: false,
+        transaction: {
+          signatures: transaction.transaction.signatures.map(s =>
+            bs58.decode(s),
+          ),
+          message: {
+            header: {
+              num_required_signatures: message.header.numRequiredSignatures,
+              num_readonly_signed_accounts:
+                message.header.numReadonlySignedAccounts,
+              num_readonly_unsigned_accounts:
+                message.header.numReadonlyUnsignedAccounts,
+            },
+            account_keys,
+            recent_blockhash: bs58.decode(message.recentBlockhash),
+            instructions,
+            versioned: isVersioned,
+            address_table_lookups,
+          },
+        },
+        meta: this.convertMeta(transaction.meta),
+        index: 0,
+      },
+      slot: transaction.slot.toString(),
+    };
+  }
+
+  public static toSubscribeUpdate(
+    transaction: VersionedTransactionResponse,
+  ): SubscribeUpdate {
+    const tx = this.toJSON(transaction);
+    const blockTime = transaction.blockTime || Math.floor(Date.now() / 1000);
+
+    return {
+      filters: [],
+      created_at: {
+        seconds: blockTime,
+        nanos: 0,
+      },
+      update_oneof: UpdateType.TRANSACTION,
+      transaction: tx,
+    };
   }
 }
